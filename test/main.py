@@ -16,7 +16,7 @@ class Window(QWidget):
         font = QFont()
         font.setPointSize(72)
         font.setBold(True)
-                    
+
         self.on_off_label = QLabel('off')
         self.on_off_label.setFont(font)
 
