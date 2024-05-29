@@ -43,12 +43,17 @@ class ControllerPanel(QMainWindow):
         self.ui.dump_radio_button.setStyleSheet("QRadioButton { background-color: white; }")
         self.ui.ignition_radio_button.setStyleSheet("QRadioButton { background-color: white; }")
         self.ui.purge_radio_button.setStyleSheet("QRadioButton { background-color: white; }")
-        
-        self.timer = QtCore.QTimer()
-        self.timer.timeout.connect(self.update)
-        self.timer.start(50)
+        # センサーの更新タイマー
+        self.sensor_timer = QtCore.QTimer()
+        self.sensor_timer.timeout.connect(self.update)
+        self.sensor_timer.start(50)
+        # バルブの状態確認タイマー
+        self.valve_timer = QtCore.QTimer()
+        self.valve_timer.timeout.connect(self.check_valve_status)
+        self.valve_timer.start(50)
         
     def released_buttons(self):
+        '''Released buttons event'''
         self.ui.on_off_button.released.connect(self.released_on_off_button)
         # Radio buttons
         self.ui.fill_radio_button.released.connect(self.released_radio_button)
@@ -130,6 +135,9 @@ class ControllerPanel(QMainWindow):
         self.thermometer_curve.setData(self.thermometer_data)
         self.ui.thermometer_view.setXRange(max(0, len(self.thermometer_data) - 100), len(self.thermometer_data))
         self.ui.temp_label.setText(f"temp: {debug_data} ℃")
+        
+    
+    def check_valve_status(self):
         if self.valve_status.get(ActionStatus.fill):
             self.ui.fill_label.setStyleSheet("QLabel { background-color: red; }")
         else:
@@ -146,7 +154,7 @@ class ControllerPanel(QMainWindow):
             self.ui.purge_label.setStyleSheet("QLabel { background-color: red; }")
         else:
             self.ui.purge_label.setStyleSheet("QLabel { background-color: green; }")
-            
+    
 
 if __name__ == "__main__":
     import sys
