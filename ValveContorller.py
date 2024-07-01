@@ -32,7 +32,7 @@ class valve(Enum):
 class ControlPanel(QDialog):
 
     # default server address and port
-    addr = "localhost"
+    addr = "192.168.100.100"
     port = 5000
     
     status = {
@@ -184,29 +184,37 @@ class ControlPanel(QDialog):
         if valve == valve.fill:
             if state == OFF:
                 self.ui.fill_button.setStyleSheet('background-color: green')
+                self.status[valve.fill] = OFF
             elif state == ON:
                 self.ui.fill_button.setStyleSheet('background-color: red')
+                self.status[valve.fill] = ON
             else:
                 pass
         if valve == valve.dump:
             if state == OFF:
                 self.ui.dump_button.setStyleSheet('background-color: green')
+                self.status[valve.dump] = OFF
             elif state == ON:
                 self.ui.dump_button.setStyleSheet('background-color: red')
+                self.status[valve.dump] = ON
             else:
                 pass
         if valve == valve.purge:
             if state == OFF:
                 self.ui.purge_button.setStyleSheet('background-color: green')
+                self.status[valve.purge] = OFF
             elif state == ON:
                 self.ui.purge_button.setStyleSheet('background-color: red')
+                self.status[valve.purge] = ON
             else:
                 pass
         if valve == valve.ignition:
             if state == OFF:
                 self.ui.ignition_button.setStyleSheet('background-color: green')
+                self.status[valve.ignition] = OFF
             elif state == ON:
                 self.ui.ignition_button.setStyleSheet('background-color: red')
+                self.status[valve.ignition] = ON
             else:
                 pass
 
