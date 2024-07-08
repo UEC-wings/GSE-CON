@@ -1,3 +1,4 @@
+from configparser import ConfigParser
 from enum import Enum, auto
 
 from PySide6.QtCore import *
@@ -6,9 +7,10 @@ from PySide6.QtGui import *
 
 from lib.socket_client import SocketClient
 
-from gui.ui_controlDialog import Ui_control_dialog
+from socket_settings import SocketSettingsDialog
+from gui.ui_ControlPanel import Ui_ControlPanel
 
-SETTINGS_INI = "./config/controller_settings.ini"
+
 
 OFF = 0
 RELEASED = 1
@@ -29,42 +31,79 @@ class valve(Enum):
     purge       = auto()
     ignition    = auto()
 
-class ControlPanel(QDialog):
-
-    # default server address and port
-    addr = "192.168.100.100"
-    port = 5000
+class ControlPanel(QMainWindow):
+    
+    # socket settings ini file path
+    _config_path        = './config/socket_settings.ini'
+    #TODO: iniファイルのkeyを他のクラスでも書いているので、一箇所にまとめるか、getterを作るかする
+    # socket settings keys
+    _section            = 'socket'
+    _addr               = 'addr'
+    _port               = 'port'
+    _socket_type        = 'socket_type'
+    _socket_family      = 'socket_family'
+    _socket_timeout     = 'socket_timeout'
+    _socket_buffer      = 'buffer_size'
+    _socket_blocking    = 'blocking'
     
     status = {
-        valve.fill : OFF,
-        valve.dump : OFF,
-        valve.purge : OFF,
-        valve.ignition : OFF
+        valve.fill      : OFF,
+        valve.dump      : OFF,
+        valve.purge     : OFF,
+        valve.ignition  : OFF
     }
 
     def __init__(self):
         super(ControlPanel, self).__init__()
-        self.ui = Ui_control_dialog()
+        self.ui = Ui_ControlPanel()
         self.ui.setupUi(self)
-        self.init_socket_client()
+        #self.init_socket_client()
         self.set_button_status(
             fill=OFF,
             dump=OFF,
             purge=OFF,
             ignition=OFF
         )
-        # init signal slots buttons
-        self.ui.fill_button.clicked.connect(self.fill_button_clicked)
-        self.ui.dump_button.clicked.connect(self.dump_button_clicked)
-        self.ui.purge_button.clicked.connect(self.purge_button_clicked)
-        self.ui.ignition_button.clicked.connect(self.ignition_button_clicked)
+        self.init_button_signals()
 
+    def init_button_signals(self):
+        self.ui.fill_button.released.connect(self.fill_button_released)
+        self.ui.dump_button.released.connect(self.dump_button_released)
+        self.ui.purge_button.released.connect(self.purge_button_released)
+        self.ui.ignition_button.released.connect(self.ignition_button_released)
+        self.ui.action_socket_settings.triggered.connect(self.show_socket_settings_dialog)
+        self.ui.action_connect.triggered.connect(self.connect_socket)
+        self.ui.action_disconnect.triggered.connect(self.disconnect_socket)
+        # connectボタン押したときにdisconnectボタンを有効化
+        self.ui.action_disconnect.setDisabled(True)
+
+    # TODO: 開いたときにMainWindowを触らせないようにする
+    def show_socket_settings_dialog(self):
+        settings_dialog = SocketSettingsDialog()
+        settings_dialog.exec()
+    
+    def connect_socket(self) -> None:
+        if self.init_socket_client():
+            # socketがopenしたとき、connectボタンを無効化し、disconnectボタンを有効化
+            self.ui.action_connect.setDisabled(True)
+            self.ui.action_disconnect.setDisabled(False)
+    
+    def disconnect_socket(self) -> None:
+        self.client.close()
+        self.client_thread.quit()
+        self.client_thread.wait()
+        # socketがcloseしたとき、disconnectボタンを無効化し、connectボタンを有効化
+        self.ui.action_connect.setDisabled(False)
+        self.ui.action_disconnect.setDisabled(True)
+    
     def init_socket_client(self) -> bool:
+        config = ConfigParser()
+        config.read(self._config_path)
         try:
             self.client_thread = QThread()
             self.client = SocketClient(
-                addr = self.addr,
-                port = self.port
+                addr = config[self._section][self._addr],
+                port = int(config[self._section][self._port])
             )
             self.client.connect_server()
             self.client.moveToThread(self.client_thread)
@@ -80,7 +119,7 @@ class ControlPanel(QDialog):
     def get_valve_status(self) -> dict:
         return self.status
     
-    def fill_button_clicked(self):
+    def fill_button_released(self):
         previous_status = self.status[valve.fill]
         self.status[valve.fill] = RELEASED
         self.set_button_status(fill=RELEASED)
@@ -91,7 +130,7 @@ class ControlPanel(QDialog):
         else:
             pass
 
-    def dump_button_clicked(self):
+    def dump_button_released(self):
         previous_status = self.status[valve.dump]
         self.status[valve.dump] = RELEASED
         self.set_button_status(dump=RELEASED)
@@ -102,7 +141,7 @@ class ControlPanel(QDialog):
         else:
             pass
 
-    def purge_button_clicked(self):
+    def purge_button_released(self):
         previous_status = self.status[valve.purge]
         self.status[valve.purge] = RELEASED
         self.set_button_status(purge=RELEASED)
@@ -113,7 +152,7 @@ class ControlPanel(QDialog):
         else:
             pass
 
-    def ignition_button_clicked(self):
+    def ignition_button_released(self):
         previous_status = self.status[valve.ignition]
         self.status[valve.ignition] = RELEASED
         self.set_button_status(ignition=RELEASED)
@@ -140,46 +179,37 @@ class ControlPanel(QDialog):
             purge (int, optional): The status of the purge button. Defaults to None.
             ignition (int, optional): The status of the ignition button. Defaults to None.
 
-        Raises:
-            ValueError: If an invalid value is provided for any of the button statuses.
         """
-        if (fill is not None):
-            if fill == OFF:
-                self.ui.fill_button.setStyleSheet('background-color: green')
-            elif fill == RELEASED:
-                self.ui.fill_button.setStyleSheet('background-color: yellow')
-            elif fill == ON:
-                self.ui.fill_button.setStyleSheet('background-color: red')
-            else:
-                raise ValueError("Invalid value")
-        if (dump is not None):
-            if dump == OFF:
-                self.ui.dump_button.setStyleSheet('background-color: green')
-            elif dump == RELEASED:
-                self.ui.dump_button.setStyleSheet('background-color: yellow')
-            elif dump == ON:
-                self.ui.dump_button.setStyleSheet('background-color: red')
-            else:
-                raise ValueError("Invalid value")
-        if (purge is not None):
-            if purge == OFF:
-                self.ui.purge_button.setStyleSheet('background-color: green')
-            elif purge == RELEASED:
-                self.ui.purge_button.setStyleSheet('background-color: yellow')
-            elif purge == ON:
-                self.ui.purge_button.setStyleSheet('background-color: red')
-            else:
-                raise ValueError("Invalid value")
-        if (ignition is not None):
-            if ignition == OFF:
-                self.ui.ignition_button.setStyleSheet('background-color: green')
-            elif ignition == RELEASED:
-                self.ui.ignition_button.setStyleSheet('background-color: yellow')
-            elif ignition == ON:
-                self.ui.ignition_button.setStyleSheet('background-color: red')
-            else:
-                raise ValueError("Invalid value")
-
+        # fill valve status update
+        if (fill is not None and fill == OFF):
+            self.ui.fill_button.setStyleSheet('background-color: green')
+        if (fill is not None and fill == RELEASED):
+            self.ui.fill_button.setStyleSheet('background-color: yellow')
+        if (fill is not None and fill == ON):
+            self.ui.fill_button.setStyleSheet('background-color: red')
+        # dump valve status update
+        if (dump is not None and dump == OFF):
+            self.ui.dump_button.setStyleSheet('background-color: green')
+        if (dump is not None and dump == RELEASED):
+            self.ui.dump_button.setStyleSheet('background-color: yellow')
+        if (dump is not None and dump == ON):
+            self.ui.dump_button.setStyleSheet('background-color: red')
+        # purge valve status update
+        if (purge is not None and purge == OFF):
+            self.ui.purge_button.setStyleSheet('background-color: green')
+        if (purge is not None and purge == RELEASED):
+            self.ui.purge_button.setStyleSheet('background-color: yellow')
+        if (purge is not None and purge == ON):
+            self.ui.purge_button.setStyleSheet('background-color: red')
+        # ignition valve status update
+        if (ignition is not None and ignition == OFF):
+            self.ui.ignition_button.setStyleSheet('background-color: green')
+        if (ignition is not None and ignition == RELEASED):
+            self.ui.ignition_button.setStyleSheet('background-color: yellow')
+        if (ignition is not None and ignition == ON):
+            self.ui.ignition_button.setStyleSheet('background-color: red')
+        
+        
     def update_valve_status(self, valve: valve, state: int):
         if valve == valve.fill:
             if state == OFF:
@@ -257,6 +287,6 @@ class ControlPanel(QDialog):
 if __name__ == '__main__':
     import sys
     app = QApplication(sys.argv)
-    dialog = ControlPanel()
-    dialog.show()
+    MainWindow = ControlPanel()
+    MainWindow.show()
     sys.exit(app.exec())
