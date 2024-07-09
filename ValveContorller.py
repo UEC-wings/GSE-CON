@@ -74,8 +74,27 @@ class ControlPanel(QMainWindow):
         self.ui.action_socket_settings.triggered.connect(self.show_socket_settings_dialog)
         self.ui.action_connect.triggered.connect(self.connect_socket)
         self.ui.action_disconnect.triggered.connect(self.disconnect_socket)
-        # connectボタン押したときにdisconnectボタンを有効化
-        self.ui.action_disconnect.setDisabled(True)
+        self.ui.action_about_qt.triggered.connect(QApplication.instance().aboutQt)
+        # connectボタン以外を無効化
+        self.is_button_disable(True)
+        
+    def is_button_disable(self, disable: bool):
+        """
+        Enable or disable buttons based on the given boolean value.
+
+        Args:
+            disable (bool): true to disable buttons, false to enable buttons.
+        
+        Note:
+            connectボタンとほかのボタンは排他的に有効化する
+        """
+        self.ui.action_connect.setDisabled(not disable)
+        self.ui.action_disconnect.setDisabled(disable)
+        self.ui.fill_button.setDisabled(disable)
+        self.ui.dump_button.setDisabled(disable)
+        self.ui.purge_button.setDisabled(disable)
+        self.ui.ignition_button.setDisabled(disable)
+        
 
     # TODO: 開いたときにMainWindowを触らせないようにする
     def show_socket_settings_dialog(self):
@@ -84,9 +103,8 @@ class ControlPanel(QMainWindow):
     
     def connect_socket(self) -> None:
         if self.init_socket_client():
-            # socketがopenしたとき、connectボタンを無効化し、disconnectボタンを有効化
-            self.ui.action_connect.setDisabled(True)
-            self.ui.action_disconnect.setDisabled(False)
+            # socketがopenしたとき、connectボタンを無効化し、他のボタンを有効化
+            self.is_button_disable(False)
     
     def disconnect_socket(self) -> None:
         self.client.close()
