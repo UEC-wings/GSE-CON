@@ -25,6 +25,8 @@ class SocketSettingsDialog(QDialog):
         self.ui = Ui_SocketSettingsDialog()
         self.ui.setupUi(self)
         self.init_settings()
+        self.ui.apply_button.released.connect(self.accept)
+        self.ui.cancel_button.released.connect(self.reject)
     
     def init_settings(self):
         config = ConfigParser()
@@ -46,6 +48,20 @@ class SocketSettingsDialog(QDialog):
             self.ui.socket_type_combo_box.setCurrentIndex(1)
         else:
             raise ValueError('Invalid socket type')
+    
+    def accept(self):
+        config = ConfigParser()
+        config.read(self._config_path)
+        config.set(self._section, self._addr,           self.ui.addr_line_edit.text())
+        config.set(self._section, self._port,           self.ui.port_line_edit.text())
+        config.set(self._section, self._socket_type,    self.ui.socket_type_combo_box.currentText())
+        with open(self._config_path, 'w') as f:
+            config.write(f)
+        super(SocketSettingsDialog, self).accept()
+    
+    def reject(self):
+        self.init_settings()
+        super(SocketSettingsDialog, self).reject()
         
 if __name__ == '__main__':
     app = QApplication([])
