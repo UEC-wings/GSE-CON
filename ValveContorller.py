@@ -5,7 +5,7 @@ from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 from PySide6.QtGui import *
 
-from lib.socket_client import SocketClient
+from socket_client import SocketClient
 
 from socket_settings import SocketSettingsDialog
 from gui.ui_ControlPanel import Ui_ControlPanel
@@ -96,9 +96,10 @@ class ControlPanel(QMainWindow):
         self.ui.ignition_button.setDisabled(disable)
         
 
-    # TODO: 開いたときにMainWindowを触らせないようにする
     def show_socket_settings_dialog(self):
         settings_dialog = SocketSettingsDialog()
+        # 他のwindowを触らせない
+        settings_dialog.setModal(True)
         settings_dialog.exec()
     
     def connect_socket(self) -> None:
@@ -118,20 +119,21 @@ class ControlPanel(QMainWindow):
         config = ConfigParser()
         config.read(self._config_path)
         try:
-            self.client_thread = QThread()
             self.client = SocketClient(
                 addr = config[self._section][self._addr],
                 port = int(config[self._section][self._port])
             )
-            self.client.connect_server()
+            if not self.client.connect_server():
+                raise("Failed to connect to the server.")
+        except Exception as e:
+            self.show_alert_dialog(e)
+            return False
+        else:
+            self.client_thread = QThread()
             self.client.moveToThread(self.client_thread)
             self.client.data_received_signal.connect(self.data_received_slot)
             self.client_thread.started.connect(self.client.received_data)
             self.client_thread.start()
-        except Exception as e:
-            print(e)
-            return False
-        else:
             return True
     
     def get_valve_status(self) -> dict:
@@ -296,6 +298,23 @@ class ControlPanel(QMainWindow):
         header, state = self.decode_command(data)
         print(header, state)
         self.update_valve_status(header, state)
+        
+    def show_alert_dialog(self, msg: str):
+        # QMessageBoxのインスタンスを作成
+        warning_msg = QMessageBox()
+        # 警告アイコンを設定
+        warning_msg.setIcon(QMessageBox.Warning)
+        # メッセージボックスのタイトルを設定
+        warning_msg.setWindowTitle("Warning")
+        # 表示するテキストを設定
+        warning_msg.setText("An error occurred.")
+        # 詳細メッセージを設定 (オプション)
+        warning_msg.setInformativeText(f"{msg}")
+        # メッセージボックスのボタンを設定
+        warning_msg.setStandardButtons(QMessageBox.Ok)
+        # デフォルトのボタンを設定 (オプション)
+        warning_msg.setDefaultButton(QMessageBox.Ok)
+        warning_msg.exec()
 
     def closeEvent(self, event):
         self.client.close()
