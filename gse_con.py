@@ -11,25 +11,15 @@ from socket_settings import SocketSettingsDialog
 from gui.ui_ControlPanel import Ui_ControlPanel
 
 
-
+# Button state
 OFF = 0
 RELEASED = 1
 ON = 2
 
-class cmd(Enum):
-    fill            = b'\xFF\xFF\xFF\xF0'
-    dump            = b'\xFF\xFF\xFF\xF1'
-    purge           = b'\xFF\xFF\xFF\xF2'
-    ignition        = b'\xFF\xFF\xFF\xF3'
-    off             = b'\x00\x00\x00\x00'
-    status          = b'\x00\x00\x00\x01'
-    on              = b'\x00\x00\x00\x02'
+# Valve state
+OPEN = 1
+CLOSE = 0
 
-class valve(Enum):
-    fill        = auto()
-    dump        = auto()
-    purge       = auto()
-    ignition    = auto()
 
 class ControlPanel(QMainWindow):
     
@@ -46,13 +36,16 @@ class ControlPanel(QMainWindow):
     _socket_buffer      = 'buffer_size'
     _socket_blocking    = 'blocking'
     
-    status = {
-        valve.fill      : OFF,
-        valve.dump      : OFF,
-        valve.purge     : OFF,
-        valve.ignition  : OFF
-    }
-
+    # Valve status
+    status_n2o_fill = CLOSE
+    status_n2o_dump = CLOSE
+    status_o2_fill = CLOSE
+    status_ignition = CLOSE
+    
+    # state of the buttons background color
+    state_valve_open = 'background-color: red'
+    state_valve_close = 'background-color: green'
+    
     def __init__(self):
         super(ControlPanel, self).__init__()
         self.ui = Ui_ControlPanel()
@@ -67,18 +60,22 @@ class ControlPanel(QMainWindow):
         self.init_button_signals()
 
     def init_button_signals(self):
-        self.ui.fill_button.released.connect(self.fill_button_released)
-        self.ui.dump_button.released.connect(self.dump_button_released)
-        self.ui.purge_button.released.connect(self.purge_button_released)
+        '''
+        Initialize button signals.
+        '''
+        # valve control button connect signals
+        self.ui.n2o_fill_button.released.connect(self.fill_button_released)
+        self.ui.n2o_dump_button.released.connect(self.dump_button_released)
+        self.ui.o2_fill_button.released.connect(self.purge_button_released)
         self.ui.ignition_button.released.connect(self.ignition_button_released)
+        # socket setting actions connect signals
         self.ui.action_socket_settings.triggered.connect(self.show_socket_settings_dialog)
         self.ui.action_connect.triggered.connect(self.connect_socket)
         self.ui.action_disconnect.triggered.connect(self.disconnect_socket)
+        # help actions connect signals
         self.ui.action_about_qt.triggered.connect(QApplication.instance().aboutQt)
-        # connectボタン以外を無効化
-        self.is_button_disable(True)
         
-    def is_button_disable(self, disable: bool):
+    def disable_buttons(self, disable: bool):
         """
         Enable or disable buttons based on the given boolean value.
 
@@ -90,11 +87,10 @@ class ControlPanel(QMainWindow):
         """
         self.ui.action_connect.setDisabled(not disable)
         self.ui.action_disconnect.setDisabled(disable)
-        self.ui.fill_button.setDisabled(disable)
-        self.ui.dump_button.setDisabled(disable)
-        self.ui.purge_button.setDisabled(disable)
+        self.ui.n2o_fill_button.setDisabled(disable)
+        self.ui.n2o_dump_button.setDisabled(disable)
+        self.ui.o2_fill_button.setDisabled(disable)
         self.ui.ignition_button.setDisabled(disable)
-        
 
     def show_socket_settings_dialog(self):
         settings_dialog = SocketSettingsDialog()
@@ -105,7 +101,7 @@ class ControlPanel(QMainWindow):
     def connect_socket(self) -> None:
         if self.init_socket_client():
             # socketがopenしたとき、connectボタンを無効化し、他のボタンを有効化
-            self.is_button_disable(False)
+            self.disable_buttons(False)
     
     def disconnect_socket(self) -> None:
         self.client.close()
@@ -185,9 +181,9 @@ class ControlPanel(QMainWindow):
     
     def set_button_status(
         self,
-        fill: int = None,
-        dump: int = None,
-        purge: int = None,
+        n2o_fill: int = None,
+        n2o_dump: int = None,
+        o2_purge: int = None,
         ignition: int = None
     ) -> None:
         """
@@ -200,13 +196,14 @@ class ControlPanel(QMainWindow):
             ignition (int, optional): The status of the ignition button. Defaults to None.
 
         """
-        # fill valve status update
-        if (fill is not None and fill == OFF):
-            self.ui.fill_button.setStyleSheet('background-color: green')
-        if (fill is not None and fill == RELEASED):
-            self.ui.fill_button.setStyleSheet('background-color: yellow')
-        if (fill is not None and fill == ON):
+        # n2o_fill button status update
+        if (n2o_fill is not None and n2o_fill == CLOSE):
+            self.ui.fill_button.setStyleSheet(self.state_valve_close)
+        elif (n2o_fill is not None and n2o_fill == OPEN):
             self.ui.fill_button.setStyleSheet('background-color: red')
+        else:
+            pass
+        
         # dump valve status update
         if (dump is not None and dump == OFF):
             self.ui.dump_button.setStyleSheet('background-color: green')
