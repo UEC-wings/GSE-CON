@@ -16,10 +16,9 @@ OFF = 0
 RELEASED = 1
 ON = 2
 
-# Valve state
+# Valve&sock state
 OPEN = 1
 CLOSE = 0
-
 
 class ControlPanel(QMainWindow):
     
@@ -36,38 +35,50 @@ class ControlPanel(QMainWindow):
     _socket_buffer      = 'buffer_size'
     _socket_blocking    = 'blocking'
     
-    # Valve status
-    status_n2o_fill = CLOSE
-    status_n2o_dump = CLOSE
-    status_o2_fill = CLOSE
-    status_ignition = CLOSE
+    # send valve status
+    status_send_n2o_fill = CLOSE
+    status_send_n2o_dump = CLOSE
+    status_send_o2_fill = CLOSE
+    status_send_ignition = CLOSE
+    
+    # received valve status
+    status_recv_n2o_fill = CLOSE
+    status_recv_n2o_dump = CLOSE
+    status_recv_o2_fill = CLOSE
+    status_recv_ignition = CLOSE
     
     # state of the buttons background color
-    state_valve_open = 'background-color: red'
-    state_valve_close = 'background-color: green'
+    state_open = 'background-color: green'
+    state_close = 'background-color: red'
     
     def __init__(self):
         super(ControlPanel, self).__init__()
         self.ui = Ui_ControlPanel()
         self.ui.setupUi(self)
         #self.init_socket_client()
-        self.set_button_status(
-            fill=OFF,
-            dump=OFF,
-            purge=OFF,
-            ignition=OFF
-        )
         self.init_button_signals()
+        self.ui.current_connection_label.setText("Disconnected")
+        self.ui.current_connection_label.setStyleSheet(self.state_close)
 
     def init_button_signals(self):
         '''
         Initialize button signals.
         '''
         # valve control button connect signals
-        self.ui.n2o_fill_button.released.connect(self.fill_button_released)
-        self.ui.n2o_dump_button.released.connect(self.dump_button_released)
-        self.ui.o2_fill_button.released.connect(self.purge_button_released)
-        self.ui.ignition_button.released.connect(self.ignition_button_released)
+        ## open&close functions
+        ### n2o fill button 
+        self.ui.open_n2o_fill_button.released.connect(self.open_n2o_fill_button_released)
+        self.ui.close_n2o_fill_button.released.connect(self.close_n2o_fill_button_released)
+        ### n2o dump button
+        self.ui.open_n2o_dump_button.released.connect(self.open_n2o_dump_button_released)
+        self.ui.close_n2o_dump_button.released.connect(self.close_n2o_dump_button_released)
+        ### o2 fill button
+        self.ui.open_o2_fill_button.released.connect(self.open_o2_fill_button_released)
+        self.ui.close_o2_fill_button.released.connect(self.close_o2_fill_button_released)
+        ### ignition button
+        self.ui.on_ignition_button.released.connect(self.on_ignition_button_released)
+        self.ui.off_ignition_button.released.connect(self.off_ignition_button_released)
+        
         # socket setting actions connect signals
         self.ui.action_socket_settings.triggered.connect(self.show_socket_settings_dialog)
         self.ui.action_connect.triggered.connect(self.connect_socket)
@@ -87,21 +98,25 @@ class ControlPanel(QMainWindow):
         """
         self.ui.action_connect.setDisabled(not disable)
         self.ui.action_disconnect.setDisabled(disable)
-        self.ui.n2o_fill_button.setDisabled(disable)
-        self.ui.n2o_dump_button.setDisabled(disable)
-        self.ui.o2_fill_button.setDisabled(disable)
-        self.ui.ignition_button.setDisabled(disable)
 
+# ---------------------------------------------------------------
+# ------------------ Socket Settings dialog ---------------------
+# ---------------------------------------------------------------
     def show_socket_settings_dialog(self):
         settings_dialog = SocketSettingsDialog()
         # 他のwindowを触らせない
         settings_dialog.setModal(True)
         settings_dialog.exec()
-    
+
+# ---------------------------------------------------------------
+# ------------------ Socket Client functions --------------------
+# ---------------------------------------------------------------
     def connect_socket(self) -> None:
         if self.init_socket_client():
             # socketがopenしたとき、connectボタンを無効化し、他のボタンを有効化
             self.disable_buttons(False)
+            self.ui.current_connection_label.setText("Connected")
+            self.ui.current_connection_label.setStyleSheet(self.state_open)
     
     def disconnect_socket(self) -> None:
         self.client.close()
@@ -132,169 +147,61 @@ class ControlPanel(QMainWindow):
             self.client_thread.start()
             return True
     
-    def get_valve_status(self) -> dict:
-        return self.status
-    
-    def fill_button_released(self):
-        previous_status = self.status[valve.fill]
-        self.status[valve.fill] = RELEASED
-        self.set_button_status(fill=RELEASED)
-        if previous_status == OFF:
-            self.client.send(cmd.fill.value+cmd.on.value)
-        elif previous_status == ON:
-            self.client.send(cmd.fill.value+cmd.off.value)
-        else:
-            pass
-
-    def dump_button_released(self):
-        previous_status = self.status[valve.dump]
-        self.status[valve.dump] = RELEASED
-        self.set_button_status(dump=RELEASED)
-        if previous_status == OFF:
-            self.client.send(cmd.dump.value+cmd.on.value)
-        elif previous_status == ON:
-            self.client.send(cmd.dump.value+cmd.off.value)
-        else:
-            pass
-
-    def purge_button_released(self):
-        previous_status = self.status[valve.purge]
-        self.status[valve.purge] = RELEASED
-        self.set_button_status(purge=RELEASED)
-        if previous_status == OFF:
-            self.client.send(cmd.purge.value+cmd.on.value)
-        elif previous_status == ON:
-            self.client.send(cmd.purge.value+cmd.off.value)
-        else:
-            pass
-
-    def ignition_button_released(self):
-        previous_status = self.status[valve.ignition]
-        self.status[valve.ignition] = RELEASED
-        self.set_button_status(ignition=RELEASED)
-        if previous_status == OFF:
-            self.client.send(cmd.ignition.value+cmd.on.value)
-        elif previous_status == ON:
-            self.client.send(cmd.ignition.value+cmd.off.value)
-        else:
-            pass
-    
-    def set_button_status(
-        self,
-        n2o_fill: int = None,
-        n2o_dump: int = None,
-        o2_purge: int = None,
-        ignition: int = None
-    ) -> None:
-        """
-        Sets the status of the buttons on the control panel.
-
-        Args:
-            fill (int, optional): The status of the fill button. Defaults to None.
-            dump (int, optional): The status of the dump button. Defaults to None.
-            purge (int, optional): The status of the purge button. Defaults to None.
-            ignition (int, optional): The status of the ignition button. Defaults to None.
-
-        """
-        # n2o_fill button status update
-        if (n2o_fill is not None and n2o_fill == CLOSE):
-            self.ui.fill_button.setStyleSheet(self.state_valve_close)
-        elif (n2o_fill is not None and n2o_fill == OPEN):
-            self.ui.fill_button.setStyleSheet('background-color: red')
-        else:
-            pass
-        
-        # dump valve status update
-        if (dump is not None and dump == OFF):
-            self.ui.dump_button.setStyleSheet('background-color: green')
-        if (dump is not None and dump == RELEASED):
-            self.ui.dump_button.setStyleSheet('background-color: yellow')
-        if (dump is not None and dump == ON):
-            self.ui.dump_button.setStyleSheet('background-color: red')
-        # purge valve status update
-        if (purge is not None and purge == OFF):
-            self.ui.purge_button.setStyleSheet('background-color: green')
-        if (purge is not None and purge == RELEASED):
-            self.ui.purge_button.setStyleSheet('background-color: yellow')
-        if (purge is not None and purge == ON):
-            self.ui.purge_button.setStyleSheet('background-color: red')
-        # ignition valve status update
-        if (ignition is not None and ignition == OFF):
-            self.ui.ignition_button.setStyleSheet('background-color: green')
-        if (ignition is not None and ignition == RELEASED):
-            self.ui.ignition_button.setStyleSheet('background-color: yellow')
-        if (ignition is not None and ignition == ON):
-            self.ui.ignition_button.setStyleSheet('background-color: red')
-        
-        
-    def update_valve_status(self, valve: valve, state: int):
-        if valve == valve.fill:
-            if state == OFF:
-                self.ui.fill_button.setStyleSheet('background-color: green')
-                self.status[valve.fill] = OFF
-            elif state == ON:
-                self.ui.fill_button.setStyleSheet('background-color: red')
-                self.status[valve.fill] = ON
-            else:
-                pass
-        if valve == valve.dump:
-            if state == OFF:
-                self.ui.dump_button.setStyleSheet('background-color: green')
-                self.status[valve.dump] = OFF
-            elif state == ON:
-                self.ui.dump_button.setStyleSheet('background-color: red')
-                self.status[valve.dump] = ON
-            else:
-                pass
-        if valve == valve.purge:
-            if state == OFF:
-                self.ui.purge_button.setStyleSheet('background-color: green')
-                self.status[valve.purge] = OFF
-            elif state == ON:
-                self.ui.purge_button.setStyleSheet('background-color: red')
-                self.status[valve.purge] = ON
-            else:
-                pass
-        if valve == valve.ignition:
-            if state == OFF:
-                self.ui.ignition_button.setStyleSheet('background-color: green')
-                self.status[valve.ignition] = OFF
-            elif state == ON:
-                self.ui.ignition_button.setStyleSheet('background-color: red')
-                self.status[valve.ignition] = ON
-            else:
-                pass
-
-    def decode_command(self, data: bytes):
+    def send_data(self, data: bytes) -> bool:
+        # packet format
+        STX1 = 0x0F
+        STX2 = 0xF0
+        count = 0x01
+        mode = 0x00 | data
+        crc_hi = 0x11
+        crc_lo = 0x11
+        packet_send = bytearray([STX1, STX2, count, mode, crc_hi, crc_lo])
         try:
-            # valve種類のデコード
-            if data[0:4] == cmd.fill.value:
-                header = valve.fill
-            elif data[0:4] == cmd.dump.value:
-                header = valve.dump
-            elif data[0:4] == cmd.purge.value:
-                header = valve.purge
-            elif data[0:4] == cmd.ignition.value:
-                header = valve.ignition
-            else:
-                header = None
-            # 状態のデコード
-            if data[4:8] == cmd.on.value:
-                state = ON
-            elif data[4:8] == cmd.off.value:
-                state = OFF
-            else:
-                state = None
+            self.client.send(packet_send)
         except Exception as e:
-            print(e)
-            return None, None
-        return header, state
-
+            self.show_alert_dialog(e)
+            return False
+        else:
+            return True
+    
     def data_received_slot(self, data: bytes):
         print(data)
-        header, state = self.decode_command(data)
-        print(header, state)
-        self.update_valve_status(header, state)
+
+# ---------------------------------------------------------------
+# ------------------ Button Released functions ------------------
+# ---------------------------------------------------------------
+    def open_n2o_fill_button_released(self):
+        self.status_send_n2o_fill = OPEN
+        self.send_data(0x01)
+    
+    def close_n2o_fill_button_released(self):
+        self.status_send_n2o_fill = CLOSE
+        self.send_data(0x00)
+        
+    def open_n2o_dump_button_released(self):
+        self.status_send_n2o_dump = OPEN
+        self.send_data(0x03)
+    
+    def close_n2o_dump_button_released(self):
+        self.status_send_n2o_dump = CLOSE
+        self.send_data(0x02)
+    
+    def open_o2_fill_button_released(self):
+        self.status_send_o2_fill = OPEN
+        self.send_data(0x05)
+    
+    def close_o2_fill_button_released(self):
+        self.status_send_o2_fill = CLOSE
+        self.send_data(0x04)
+    
+    def on_ignition_button_released(self):
+        self.status_send_ignition = ON
+        self.send_data(0x07)
+    
+    def off_ignition_button_released(self):
+        self.status_send_ignition = OFF
+        self.send_data(0x06)
+
         
     def show_alert_dialog(self, msg: str):
         # QMessageBoxのインスタンスを作成

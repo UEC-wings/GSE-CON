@@ -33,24 +33,30 @@
          </widget>
         </item>
         <item>
-         <widget class="QLabel" name="current_status_label">
-          <property name="frameShape">
-           <enum>QFrame::Shape::Box</enum>
-          </property>
-          <property name="text">
-           <string>CURRENT STATUS</string>
-          </property>
+         <widget class="QDateTimeEdit" name="data_time_edit">
           <property name="alignment">
            <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+          <property name="readOnly">
+           <bool>true</bool>
+          </property>
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::ButtonSymbols::NoButtons</enum>
+          </property>
+          <property name="currentSection">
+           <enum>QDateTimeEdit::Section::YearSection</enum>
+          </property>
+          <property name="displayFormat">
+           <string>yyyy/MM/dd H:mm:ss</string>
           </property>
          </widget>
         </item>
        </layout>
       </item>
       <item>
-       <layout class="QHBoxLayout" name="horizontalLayout">
+       <layout class="QHBoxLayout" name="horizontalLayout_4">
         <item>
-         <widget class="QPushButton" name="n2o_fill_button">
+         <widget class="QPushButton" name="open_n2o_fill_button">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Ignored" vsizetype="Ignored">
             <horstretch>0</horstretch>
@@ -58,7 +64,20 @@
            </sizepolicy>
           </property>
           <property name="text">
-           <string>N2O_FILL</string>
+           <string>N2O_FILL_OPEN</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="close_n2o_fill_button">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Ignored" vsizetype="Ignored">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>N2O_FILL_CLOSE</string>
           </property>
          </widget>
         </item>
@@ -78,9 +97,9 @@
        </layout>
       </item>
       <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_2">
+       <layout class="QHBoxLayout" name="horizontalLayout_3">
         <item>
-         <widget class="QPushButton" name="n2o_dump_button">
+         <widget class="QPushButton" name="open_n2o_dump_button">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Ignored" vsizetype="Ignored">
             <horstretch>0</horstretch>
@@ -88,7 +107,20 @@
            </sizepolicy>
           </property>
           <property name="text">
-           <string>N2O_DUMP</string>
+           <string>N2O_DUMP_OPEN</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="close_n2o_dump_button">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Ignored" vsizetype="Ignored">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>N2O_DUMP_CLOSE</string>
           </property>
          </widget>
         </item>
@@ -108,9 +140,9 @@
        </layout>
       </item>
       <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_3">
+       <layout class="QHBoxLayout" name="horizontalLayout_2">
         <item>
-         <widget class="QPushButton" name="o2_fill_button">
+         <widget class="QPushButton" name="open_o2_fill_button">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Ignored" vsizetype="Ignored">
             <horstretch>0</horstretch>
@@ -118,7 +150,20 @@
            </sizepolicy>
           </property>
           <property name="text">
-           <string>O2_FILL</string>
+           <string>O2_FILL_OPEN</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="close_o2_fill_button">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Ignored" vsizetype="Ignored">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>O2_FILL_CLOSE</string>
           </property>
          </widget>
         </item>
@@ -138,9 +183,9 @@
        </layout>
       </item>
       <item>
-       <layout class="QHBoxLayout" name="horizontalLayout_4">
+       <layout class="QHBoxLayout" name="horizontalLayout">
         <item>
-         <widget class="QPushButton" name="ignition_button">
+         <widget class="QPushButton" name="on_ignition_button">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Ignored" vsizetype="Ignored">
             <horstretch>0</horstretch>
@@ -148,7 +193,20 @@
            </sizepolicy>
           </property>
           <property name="text">
-           <string>IGNITION</string>
+           <string>IGNITION_ON</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="off_ignition_button">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Ignored" vsizetype="Ignored">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>IGNITION_OFF</string>
           </property>
          </widget>
         </item>
