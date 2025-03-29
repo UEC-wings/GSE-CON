@@ -6,6 +6,7 @@ from PySide6.QtWidgets import *
 from PySide6.QtGui import *
 
 from socket_client import SocketClient
+import crc
 
 from socket_settings import SocketSettingsDialog
 from gui.ui_ControlPanel import Ui_ControlPanel
@@ -59,6 +60,8 @@ class ControlPanel(QMainWindow):
         self.init_button_signals()
         self.ui.current_connection_label.setText("Disconnected")
         self.ui.current_connection_label.setStyleSheet(self.state_close)
+        # init packet count
+        self.count = 0
 
     def init_button_signals(self):
         '''
@@ -148,14 +151,7 @@ class ControlPanel(QMainWindow):
             return True
     
     def send_data(self, data: bytes) -> bool:
-        # packet format
-        STX1 = 0x0F
-        STX2 = 0xF0
-        count = 0x01
-        mode = 0x00 | data
-        crc_hi = 0x11
-        crc_lo = 0x11
-        packet_send = bytearray([STX1, STX2, count, mode, crc_hi, crc_lo])
+        packet_send = self.pack_send_packet(data)
         try:
             self.client.send(packet_send)
         except Exception as e:
@@ -166,6 +162,26 @@ class ControlPanel(QMainWindow):
     
     def data_received_slot(self, data: bytes):
         print(data)
+        
+    def pack_send_packet(self, data: bytes) -> bytearray:
+        # packet format
+        STX1 = 0x0F
+        STX2 = 0xF0
+        # count
+        mode = 0x00 | data
+        crc_hi = 0xFF
+        crc_lo = 0xFF
+        
+        packet_send = bytearray([STX1, STX2, self.count, mode, crc_hi, crc_lo])
+        
+        # calculate crc
+        
+        
+        # count up
+        self.count += 1
+        if self.count > 255:
+            self.count = 0
+        return packet_send
 
 # ---------------------------------------------------------------
 # ------------------ Button Released functions ------------------
@@ -203,7 +219,16 @@ class ControlPanel(QMainWindow):
         self.send_data(0x06)
 
         
-    def show_alert_dialog(self, msg: str):
+    def show_alert_dialog(self, msg: str) -> None:
+        '''
+        show alert dialog with warning icon and message.
+        
+        Args:
+            msg (str): message to show in the dialog.
+            
+        Returns:
+            None
+        '''
         # QMessageBoxのインスタンスを作成
         warning_msg = QMessageBox()
         # 警告アイコンを設定
@@ -221,6 +246,9 @@ class ControlPanel(QMainWindow):
         warning_msg.exec()
 
     def closeEvent(self, event):
+        '''
+        Override the closeEvent to handle the window close event.
+        '''
         self.client.close()
         self.client_thread.quit()
         self.client_thread.wait()
